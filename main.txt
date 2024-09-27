@@ -1,0 +1,179 @@
+import pygame
+import sys
+import random
+import time
+
+# 初始化 Pygame
+pygame.init()
+
+# 設定螢幕參數
+screen_width = 800
+screen_height = 600
+screen = pygame.display.set_mode((screen_width, screen_height))
+pygame.display.set_caption('迷宮遊戲')
+
+# 設定顏色
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+BLUE = (0, 0, 255)
+GREEN = (0, 255, 0)
+YELLOW = (255, 255, 0)
+
+# 設定主角參數
+player_size = 30
+player_x = 100
+player_y = 100
+player_color = RED
+player_speed = 5
+
+# 設定終點
+endpoint_size = 30
+endpoint_x = screen_width - 100
+endpoint_y = screen_height - 100
+endpoint_color = GREEN
+
+# 設定牆壁參數
+wall_width = 30
+wall_height = 50
+num_walls = 15
+walls = [pygame.Rect(random.randint(0, screen_width - wall_width), random.randint(0, screen_height - wall_height), wall_width, wall_height) for _ in range(num_walls)]
+
+# 設定敵人參數
+enemy_size = 30
+num_enemies = 5
+enemies = [pygame.Rect(random.randint(0, screen_width - enemy_size), random.randint(0, screen_height - enemy_size), enemy_size, enemy_size) for _ in range(num_enemies)]
+enemy_speed = 3
+
+# 設定計時器
+start_time = time.time()
+
+# 設定計分
+score = 0
+font = pygame.font.Font(None, 36)
+
+# 移動牆壁函數
+def move_walls(walls):
+    for wall in walls:
+        wall.x += random.choice([-1, 1]) * random.randint(1, 5)
+        wall.y += random.choice([-1, 1]) * random.randint(1, 5)
+        if wall.x < 0:
+            wall.x = 0
+        elif wall.x > screen_width - wall.width:
+            wall.x = screen_width - wall.width
+        if wall.y < 0:
+            wall.y = 0
+        elif wall.y > screen_height - wall.height:
+            wall.y = screen_height - wall.height
+
+# 移動敵人函數
+def move_enemies(enemies):
+    for enemy in enemies:
+        direction = random.choice(['left', 'right', 'up', 'down'])
+        if direction == 'left':
+            enemy.x -= enemy_speed
+        elif direction == 'right':
+            enemy.x += enemy_speed
+        elif direction == 'up':
+            enemy.y -= enemy_speed
+        elif direction == 'down':
+            enemy.y += enemy_speed
+        
+        # 限制敵人在螢幕內
+        if enemy.x < 0:
+            enemy.x = 0
+        if enemy.x > screen_width - enemy_size:
+            enemy.x = screen_width - enemy_size
+        if enemy.y < 0:
+            enemy.y = 0
+        if enemy.y > screen_height - enemy_size:
+            enemy.y = screen_height - enemy_size
+
+# 繪製計時器和計分
+def draw_timer_and_score(screen, start_time, score):
+    # 計時
+    elapsed_time = time.time() - start_time
+    timer_text = font.render(f'Time: {int(elapsed_time)}', True, BLACK)
+    screen.blit(timer_text, (10, 10))
+
+    # 計分
+    score_text = font.render(f'Score: {score}', True, BLACK)
+    screen.blit(score_text, (10, 50))
+
+# 檢查碰撞
+def check_collisions(player_rect, objects):
+    for obj in objects:
+        if player_rect.colliderect(obj):
+            return True
+    return False
+
+# 遊戲主迴圈
+while True:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+
+    # 獲取按鍵
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_LEFT]:
+        player_x -= player_speed
+    if keys[pygame.K_RIGHT]:
+        player_x += player_speed
+    if keys[pygame.K_UP]:
+        player_y -= player_speed
+    if keys[pygame.K_DOWN]:
+        player_y += player_speed
+
+    # 限制主角在螢幕內
+    if player_x < 0:
+        player_x = 0
+    if player_x > screen_width - player_size:
+        player_x = screen_width - player_size
+    if player_y < 0:
+        player_y = 0
+    if player_y > screen_height - player_size:
+        player_y = screen_height - player_size
+
+    # 移動牆壁
+    move_walls(walls)
+
+    # 移動敵人
+    move_enemies(enemies)
+
+    # 檢查碰撞
+    player_rect = pygame.Rect(player_x, player_y, player_size, player_size)
+    if check_collisions(player_rect, walls) or check_collisions(player_rect, enemies):
+        # 如果發生碰撞，遊戲結束
+        print("Game Over")
+        pygame.quit()
+        sys.exit()
+
+    # 檢查是否到達終點
+    endpoint_rect = pygame.Rect(endpoint_x, endpoint_y, endpoint_size, endpoint_size)
+    if player_rect.colliderect(endpoint_rect):
+        print("You Win")
+        pygame.quit()
+        sys.exit()
+
+    # 更新畫面
+    screen.fill(WHITE)
+    pygame.draw.rect(screen, player_color, player_rect)
+    pygame.draw.rect(screen, endpoint_color, endpoint_rect)
+    for wall in walls:
+        pygame.draw.rect(screen, BLUE, wall)
+    for enemy in enemies:
+        pygame.draw.rect(screen, YELLOW, enemy)
+
+    # 繪製計時器和計分
+    draw_timer_and_score(screen, start_time, score)
+
+    # 更新畫面
+    pygame.display.flip()
+
+    # 每間隔一段時間增加一分
+    if int(time.time() - start_time) % 5 == 0:
+        score += 1
+
+    # 控制遊戲主迴圈速度
+    pygame.time.Clock().tick(30)
